@@ -1,0 +1,15 @@
+apiVersion: v2
+name: tempurl-httproute
+description: >-
+  Serve a private OpenStack Swift container tree through a public hostname
+  using Envoy Gateway, with each Swift TempURL signature refreshed
+  automatically before it expires. One release serves one hostname; one
+  values.yaml is the source of truth for the routes and the refresher.
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+keywords:
+  - envoy-gateway
+  - swift
+  - tempurl
+  - reverse-proxy

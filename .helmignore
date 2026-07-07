@@ -1,0 +1,9 @@
+# Patterns to ignore when building Helm packages.
+.git
+.gitignore
+*.swp
+*.tmp
+*.bak
+__pycache__/
+*.py[cod]
+.DS_Store

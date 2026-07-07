@@ -1,0 +1,18 @@
+{{- $fullname := include "tempurl-httproute.fullname" . -}}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ $fullname }}-refresh
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tempurl-httproute.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: post-install,post-upgrade
+    # Only deleted automatically on success. A failed Job is left behind
+    # intentionally so logs are available for debugging. Run
+    # `kubectl delete job <name>-refresh -n <namespace>` to clear it before
+    # the next upgrade, otherwise Helm will fail trying to create a Job that
+    # already exists.
+    helm.sh/hook-delete-policy: hook-succeeded
+spec:
+  {{- include "tempurl-httproute.refreshJobSpec" . | nindent 2 }}

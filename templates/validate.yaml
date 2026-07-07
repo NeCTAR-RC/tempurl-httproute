@@ -1,0 +1,43 @@
+{{- /*
+Render-time pre-flight: fail helm install/upgrade with a descriptive error when
+a rewrite's signing key is missing, instead of letting the refresh hook Job fail
+with an opaque BackoffLimitExceeded. This template renders no resources.
+
+Inline mode (.Values.keys set): the chart renders the Secret itself, so the
+check is pure values validation and also runs offline (helm template/lint).
+
+Existing-Secret mode (.Values.keys empty): the Secret must pre-exist, so the
+check needs lookup, which only returns data against a live cluster. The
+kube-system probe detects that: offline renders (helm template, helm lint,
+client-side --dry-run) skip the check, as does an installer without permission
+to read the kube-system Namespace; in those cases the refresh hook still fails
+the release as a backstop.
+*/ -}}
+{{- $secretName := include "tempurl-httproute.keySecretName" . }}
+{{- if .Values.keys }}
+{{- $missing := list }}
+{{- range $rw := .Values.rewrites }}
+{{- $dataKey := include "tempurl-httproute.dataKey" $rw }}
+{{- if not (hasKey $.Values.keys $dataKey) }}
+{{- $missing = append $missing $dataKey }}
+{{- end }}
+{{- end }}
+{{- if $missing }}
+{{- fail (printf "keys is missing entries %s. When keys is set it must hold every rewrite's signing key, named after the rewrite's path." (join ", " $missing)) }}
+{{- end }}
+{{- else if lookup "v1" "Namespace" "" "kube-system" }}
+{{- $secret := lookup "v1" "Secret" .Release.Namespace $secretName }}
+{{- if not $secret }}
+{{- fail (printf "keys Secret %s/%s not found. Either set keys in values so the chart creates it, or create the Secret before installing (docs/deployment.md, step 2): one data key per rewrite, named after its path." .Release.Namespace $secretName) }}
+{{- end }}
+{{- $missing := list }}
+{{- range $rw := .Values.rewrites }}
+{{- $dataKey := include "tempurl-httproute.dataKey" $rw }}
+{{- if not (hasKey ($secret.data | default dict) $dataKey) }}
+{{- $missing = append $missing $dataKey }}
+{{- end }}
+{{- end }}
+{{- if $missing }}
+{{- fail (printf "keys Secret %s/%s is missing data key(s) %s. Each rewrite needs a signing key stored under its path." .Release.Namespace $secretName (join ", " $missing)) }}
+{{- end }}
+{{- end }}

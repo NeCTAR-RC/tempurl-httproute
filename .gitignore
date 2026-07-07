@@ -1,0 +1,9 @@
+# Helm build artifacts
+*.tgz
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editor
+*.swp

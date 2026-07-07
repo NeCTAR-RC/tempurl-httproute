@@ -1,0 +1,66 @@
+# tempurl-httproute: single source of truth.
+#
+# One release serves one public hostname. Each entry in `rewrites` becomes one
+# HTTPRoute rule + one HTTPRouteFilter, and the refresher CronJob recomputes
+# every TempURL signature daily and patches each HTTPRouteFilter in place.
+# All resources live in the release namespace. To serve another hostname,
+# install another release (typically in its own namespace).
+
+# The Gateway the HTTPRoute attaches to (parentRef). The Gateway's listener
+# must allow route attachment from the release namespace
+# (spec.listeners[].allowedRoutes.namespaces).
+gateway:
+  name: default
+  namespace: infra
+
+# The public hostname this release serves. Override this per release; the
+# default is a placeholder so `helm template .` renders without extra flags.
+hostname: files.example.com
+
+# The upstream Swift endpoint.
+# create: true renders a Backend in the release namespace; create: false
+# references an existing Backend (in the release namespace) by name.
+backend:
+  create: true
+  # Backend name. Empty string => derived from the release fullname.
+  # With create: false this must name the existing Backend.
+  name: ""
+  # Upstream FQDN when create is true. Override this per release; the default
+  # is a placeholder so `helm template .` renders without extra flags.
+  hostname: object-store.example.com
+  port: 443
+  # TLS is always applied to a chart-created Backend. The block below is
+  # optional and only needed to override the secure defaults.
+  tls: {}
+  #   sni: object-store.example.com       # optional; defaults to hostname
+  #   wellKnownCACertificates: System     # optional; defaults to System (system CA bundle)
+
+# One entry per public path segment.
+rewrites: []
+  # - path: docs                          # public path segment; signing key = Secret data key "docs"
+  #   projectId: 0123456789abcdef0123456789abcdef
+  #   container: docs-container
+  #   prefix: docs
+  #   # expirySeconds: 604800             # optional; overrides refresh.defaultExpirySeconds
+
+# Signing keys, one per rewrite, keyed by the rewrite's path.
+# If set, the chart renders the keys Secret itself and helm install is a
+# one-liner. If empty (default), create the Secret yourself before installing
+# (name: refresh.keySecretName, default "<fullname>-keys"), e.g. when the
+# Secret is produced by Sealed Secrets or another controller.
+# Note: inline keys pass through the values file and Helm release storage;
+# keep such values files out of git. To keep keys in git safely, use a
+# pre-created Secret produced from a committed SealedSecret instead.
+keys: {}
+#  wiki: REPLACE_WITH_SWIFT_TEMPURL_KEY
+
+refresh:
+  # When to refresh signatures. Default 03:00 daily.
+  schedule: "0 3 * * *"
+  # Image used by the CronJob. Pure stdlib script, so any python:3 works.
+  image: python:3-slim
+  # TempURL lifetime when a rewrite does not set its own expirySeconds.
+  defaultExpirySeconds: 604800 # 7 days
+  # Name of the keys Secret in the release namespace.
+  # Empty string => derived as "<release-fullname>-keys" (e.g. tempurl-httproute-keys).
+  keySecretName: ""

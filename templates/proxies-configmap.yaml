@@ -1,0 +1,27 @@
+{{- $ := . -}}
+{{- $records := list }}
+{{- $secret := include "tempurl-httproute.keySecretName" $ }}
+{{- range $rw := .Values.rewrites }}
+{{- $filterName := include "tempurl-httproute.filterName" (dict "root" $ "rewrite" $rw) }}
+{{- $rec := dict
+    "name" $filterName
+    "namespace" $.Release.Namespace
+    "filterName" $filterName
+    "dataKey" (include "tempurl-httproute.dataKey" $rw)
+    "projectId" $rw.projectId
+    "container" $rw.container
+    "prefix" $rw.prefix
+    "keySecretName" $secret
+    "expirySeconds" (default $.Values.refresh.defaultExpirySeconds $rw.expirySeconds | int) }}
+{{- $records = append $records $rec }}
+{{- end }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "tempurl-httproute.fullname" . }}-proxies
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tempurl-httproute.labels" . | nindent 4 }}
+data:
+  proxies.json: |
+    {{- dict "proxies" $records | toPrettyJson | nindent 4 }}

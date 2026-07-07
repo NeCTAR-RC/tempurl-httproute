@@ -1,0 +1,40 @@
+{{- $ := . -}}
+{{- $hostname := required "hostname is required" .Values.hostname -}}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "tempurl-httproute.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tempurl-httproute.labels" . | nindent 4 }}
+spec:
+  parentRefs:
+    - name: {{ .Values.gateway.name }}
+      namespace: {{ .Values.gateway.namespace }}
+  hostnames:
+    - {{ $hostname | quote }}
+  rules:
+    {{- range $rw := .Values.rewrites }}
+    {{- $filterName := include "tempurl-httproute.filterName" (dict "root" $ "rewrite" $rw) }}
+    - matches:
+        - path:
+            type: PathPrefix
+            value: {{ printf "/%s" $rw.path | quote }}
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: gateway.envoyproxy.io
+            kind: HTTPRouteFilter
+            name: {{ $filterName }}
+        # 'authorization' header may be added by e.g. OIDC gateways like KeyCloak to hold JWT tokens.
+        # Swift interprets requests with 'authorization' header as a S3 request instead of Swift.
+        # Strip this header to ensure tempurl auth is used.
+        - requestHeaderModifier:
+            remove:
+            - authorization
+          type: RequestHeaderModifier
+      backendRefs:
+        - group: gateway.envoyproxy.io
+          kind: Backend
+          name: {{ include "tempurl-httproute.backendName" $ }}
+    {{- end }}

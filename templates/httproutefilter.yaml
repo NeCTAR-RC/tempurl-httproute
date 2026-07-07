@@ -1,0 +1,25 @@
+{{- $ := . -}}
+{{- range $rw := .Values.rewrites }}
+{{- $filterName := include "tempurl-httproute.filterName" (dict "root" $ "rewrite" $rw) }}
+---
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: HTTPRouteFilter
+metadata:
+  name: {{ $filterName }}
+  namespace: {{ $.Release.Namespace }}
+  labels:
+    {{- include "tempurl-httproute.labels" $ | nindent 4 }}
+spec:
+  urlRewrite:
+    hostname:
+      type: Backend
+    path:
+      type: ReplaceRegexMatch
+      replaceRegexMatch:
+        pattern: {{ printf "^/%s/([^?]+)(?:\\?(.*))?$" $rw.path | quote }}
+        # Placeholder. The tempurl-refresh CronJob patches this with the signed
+        # Swift TempURL on its first run, then daily before the signature expires.
+        # Any GitOps tooling must be told to ignore this field, otherwise a
+        # self-heal/sync reverts the signature to this placeholder.
+        substitution: "/__pending_refresh__"
+{{- end }}

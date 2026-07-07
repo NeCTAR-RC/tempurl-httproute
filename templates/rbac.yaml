@@ -1,0 +1,42 @@
+{{- $fullname := include "tempurl-httproute.fullname" . -}}
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tempurl-httproute.labels" . | nindent 4 }}
+---
+# get/patch HTTPRouteFilters (to write the refreshed signature) and get Secrets
+# (to read the signing keys). Namespaced: the refresher can only touch the
+# release namespace.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tempurl-httproute.labels" . | nindent 4 }}
+rules:
+  - apiGroups: ["gateway.envoyproxy.io"]
+    resources: ["httproutefilters"]
+    verbs: ["get", "patch"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ $fullname }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tempurl-httproute.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ $fullname }}
+subjects:
+  - kind: ServiceAccount
+    name: {{ $fullname }}
+    namespace: {{ .Release.Namespace }}

@@ -1,0 +1,21 @@
+{{- if .Values.backend.create }}
+{{- $hostname := required "backend.hostname is required when backend.create is true" .Values.backend.hostname -}}
+apiVersion: gateway.envoyproxy.io/v1alpha1
+kind: Backend
+metadata:
+  name: {{ include "tempurl-httproute.backendName" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "tempurl-httproute.labels" . | nindent 4 }}
+spec:
+  type: Endpoints
+  endpoints:
+    - fqdn:
+        hostname: {{ $hostname | quote }}
+        port: {{ .Values.backend.port | default 443 }}
+  {{- $tls := .Values.backend.tls | default dict }}
+  # TLS is always applied; backend.tls only overrides the secure defaults.
+  tls:
+    sni: {{ $tls.sni | default $hostname | quote }}
+    wellKnownCACertificates: {{ $tls.wellKnownCACertificates | default "System" }}
+{{- end }}
