@@ -17,9 +17,12 @@ spec:
       type: ReplaceRegexMatch
       replaceRegexMatch:
         pattern: {{ printf "^/%s/([^?]+)(?:\\?(.*))?$" $rw.path | quote }}
-        # Placeholder. The tempurl-refresh CronJob patches this with the signed
-        # Swift TempURL on its first run, then daily before the signature expires.
-        # Any GitOps tooling must be told to ignore this field, otherwise a
-        # self-heal/sync reverts the signature to this placeholder.
-        substitution: "/__pending_refresh__"
+        # The refresh Job/CronJob owns this field: it patches in the signed
+        # Swift TempURL post-install, then daily before the signature expires.
+        # Re-apply whatever value is live so upgrades never fight that owner
+        # (server-side apply only conflicts on differing values). The
+        # placeholder is used on fresh installs and offline renders
+        # (`helm template`), where lookup returns nothing.
+        {{- $live := lookup "gateway.envoyproxy.io/v1alpha1" "HTTPRouteFilter" $.Release.Namespace $filterName | default dict }}
+        substitution: {{ dig "spec" "urlRewrite" "path" "replaceRegexMatch" "substitution" "/__pending_refresh__" $live | quote }}
 {{- end }}
