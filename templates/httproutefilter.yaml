@@ -16,7 +16,7 @@ spec:
     path:
       type: ReplaceRegexMatch
       replaceRegexMatch:
-        pattern: {{ printf "^/%s/([^?]+)(?:\\?(.*))?$" $rw.path | quote }}
+        pattern: {{ printf "^/%s/(.*)$" $rw.path | quote }}
         # The refresh Job/CronJob owns this field: it patches in the signed
         # Swift TempURL post-install, then daily before the signature expires.
         # Re-apply whatever value is live so upgrades never fight that owner
