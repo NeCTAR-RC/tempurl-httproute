@@ -1,3 +1,4 @@
+{{- if .Values.httpRoute.create }}
 {{- $ := . -}}
 {{- $hostname := required "hostname is required" .Values.hostname -}}
 apiVersion: gateway.networking.k8s.io/v1
@@ -38,3 +39,4 @@ spec:
           kind: Backend
           name: {{ include "tempurl-httproute.backendName" $ }}
     {{- end }}
+{{- end }}

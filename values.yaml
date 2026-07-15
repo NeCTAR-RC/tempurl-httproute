@@ -17,6 +17,14 @@ gateway:
 # default is a placeholder so `helm template .` renders without extra flags.
 hostname: files.example.com
 
+# The HTTPRoute that binds the hostname's paths to the Backend.
+# create: false skips it, for when the route is managed outside this chart
+# (e.g. combined with other rules on the same hostname); the HTTPRouteFilters,
+# Backend and refresher still render for the external route to reference.
+# With create: false, gateway and hostname are unused.
+httpRoute:
+  create: true
+
 # The upstream Swift endpoint.
 # create: true renders a Backend in the release namespace; create: false
 # references an existing Backend (in the release namespace) by name.

@@ -35,6 +35,14 @@ rewrite's `path` (e.g. `wiki`). The Secret can be populated two ways:
 A render-time pre-flight ([templates/validate.yaml](../templates/validate.yaml)) fails the
 install with a descriptive error when a rewrite's key is missing in either mode.
 
+## HTTPRoute
+
+By default (`httpRoute.create: true`) the chart renders the `HTTPRoute` that attaches
+`hostname` to the gateway. Set `httpRoute.create: false` to manage the route outside the
+chart, e.g. to combine these rules with others on the same hostname. The `HTTPRouteFilter`s,
+`Backend` and refresher still render, so an externally managed route can reference them by
+name. With `httpRoute.create: false`, `gateway` and `hostname` are unused.
+
 ## Backend
 
 The route sends traffic to a `Backend` in the release namespace. By default
@@ -55,7 +63,7 @@ values.yaml                       # single source of truth
 files/refresh.py                  # refresher script (loaded via .Files.Get)
 templates/
   _helpers.tpl
-  httproute.yaml                  # 1 HTTPRoute, 1 rule per rewrite
+  httproute.yaml                  # 1 HTTPRoute, 1 rule per rewrite (when httpRoute.create is true)
   httproutefilter.yaml            # 1 HTTPRouteFilter per rewrite
   backend.yaml                    # the Backend (when backend.create is true)
   secret.yaml                     # the keys Secret (when keys is set in values)
