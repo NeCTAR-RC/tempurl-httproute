@@ -6,8 +6,9 @@ description: >-
   automatically before it expires. One release serves one hostname; one
   values.yaml is the source of truth for the routes and the refresher.
 type: application
-version: 0.1.0
-appVersion: "1.0.0"
+version: 0.2.0
+sources:
+- https://github.com/NeCTAR-RC/tempurl-httproute.git
 keywords:
   - envoy-gateway
   - swift
